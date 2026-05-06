@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>JARRETT</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#ffffff;--s1:#f9fafb;--s2:#f3f4f6;--s3:#e5e7eb;
+--b1:#e5e7eb;--b2:#d1d5db;
+--t:#111827;--t2:#4b5563;--t3:#6b7280;--t4:#9ca3af;
+--g:#16a34a;--gl:#f0fdf4;--gb:#15803d;--gx:#dcfce7;
+--bl:#0284c7;--bll:#f0f9ff;--blb:#0369a1;
+--am:#d97706;--aml:#fffbeb;--amb:#92400e;
+--rd:#dc2626;--rdl:#fef2f2;--rdb:#991b1b;
+--pp:#7c3aed;--ppl:#f5f3ff;--ppb:#5b21b6;
+--fm:'DM Mono',monospace;--fb:'Outfit',-apple-system,sans-serif;
+--sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+--sh2:0 4px 16px rgba(0,0,0,.08);--r:14px
+}
+body{background:var(--bg);color:var(--t);font-family:var(--fb);min-height:100vh;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button{font-family:var(--fb);cursor:pointer}input,select,textarea{font-family:var(--fb)}
+/* Toast */
+#toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-80px);padding:14px 28px;border-radius:14px;font-size:14px;font-weight:700;z-index:999;opacity:0;transition:all .3s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.ok{background:var(--gx);border:1px solid #86efac;color:var(--gb);transform:translateX(-50%) translateY(0);opacity:1}
+#toast.warn{background:var(--rdl);border:1px solid #fca5a5;color:var(--rdb);transform:translateX(-50%) translateY(0);opacity:1}
+#toast.info{background:var(--aml);border:1px solid #fcd34d;color:var(--amb);transform:translateX(-50%) translateY(0);opacity:1}
+/* Layout */
+.mid{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#f0fdf4 0%,#f0f9ff 50%,#f5f3ff 100%)}
+.wrap{max-width:540px;margin:0 auto;width:100%}
+.body{padding:16px 16px 100px;background:var(--s1);min-height:calc(100vh - 56px)}
+/* Bottom nav */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);backdrop-filter:blur(16px);border-top:1px solid var(--b1);padding:6px 0;padding-bottom:max(6px,env(safe-area-inset-bottom));z-index:50;display:flex;justify-content:center}
+.bnav-in{display:flex;max-width:540px;width:100%}
+.bnav-b{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;background:none;border:none;color:var(--t4);font-size:10px;font-weight:600;letter-spacing:.5px;transition:color .15s}
+.bnav-b.on{color:var(--g)}.bnav-b.on .bnav-ic{background:var(--gl);color:var(--g)}
+.bnav-ic{width:36px;height:28px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s}
+/* Top bar */
+.tbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;position:sticky;top:0;z-index:40;background:rgba(255,255,255,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--b1)}
+/* Cards */
+.cd{background:var(--bg);border:1px solid var(--b1);border-radius:var(--r);padding:18px 20px;margin-bottom:12px;box-shadow:var(--sh)}
+.cd-g{border-left:3px solid var(--g)}.cd-r{border-left:3px solid var(--rd)}.cd-b{border-left:3px solid var(--bl)}.cd-a{border-left:3px solid var(--am)}.cd-p{border-left:3px solid var(--pp)}
+/* Accordion */
+.ac-h{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;padding:2px 0}
+.ac-i{color:var(--t4);font-size:11px;transition:transform .2s;font-family:var(--fm);padding:4px}.ac-i.open{transform:rotate(180deg)}
+.ac-b{overflow:hidden;max-height:0;opacity:0;transition:max-height .3s ease,opacity .2s ease}.ac-b.open{max-height:8000px;opacity:1}
+/* Typography */
+.lbl{font-size:11px;font-family:var(--fm);letter-spacing:2.5px;color:var(--t4);text-transform:uppercase;margin-bottom:6px;font-weight:500}
+.lg{color:var(--g)}.lb{color:var(--bl)}.la{color:var(--am)}.lr{color:var(--rd)}.lp{color:var(--pp)}
+.il{display:block;font-size:12px;color:var(--t3);margin-bottom:5px;font-weight:600}
+.h1{font-size:28px;font-weight:800;letter-spacing:-.5px}.h2{font-size:20px;font-weight:700}.h3{font-size:15px;font-weight:700}
+.sub{color:var(--t2);font-size:14px;line-height:1.7}.dim{color:var(--t3);font-size:13px}
+/* Inputs */
+.inp,.sel,.ta{width:100%;background:var(--bg);border:1.5px solid var(--b1);border-radius:10px;padding:12px 14px;color:var(--t);font-size:14px;outline:none}
+.inp:focus,.sel:focus,.ta:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(22,163,74,.08)}.ta{resize:vertical;min-height:56px}.sel{appearance:none}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 22px;border-radius:10px;font-size:13px;font-weight:700;outline:none;border:none;transition:all .15s;box-shadow:var(--sh)}
+.btn:active{transform:scale(.97)}
+.bg{background:var(--g);color:#fff}.bb{background:var(--bl);color:#fff}.br{background:var(--rd);color:#fff}.bx{background:var(--bg);color:var(--t3);border:1px solid var(--b1)}
+.bf{width:100%;text-align:center;padding:13px}
+/* Toggles */
+.tg{padding:10px 16px;border-radius:10px;font-size:12px;font-weight:600;font-family:var(--fm);border:1.5px solid var(--b1);background:var(--bg);color:var(--t3);outline:none}
+.tg.on{background:var(--gl);color:var(--gb);border-color:#86efac}
+/* Alerts */
+.al{padding:14px 16px;border-radius:12px;margin-bottom:10px;font-size:13px;line-height:1.5;display:flex;gap:12px;align-items:flex-start;font-weight:600;box-shadow:var(--sh)}
+.al-r{background:var(--rdl);color:var(--rdb);border:1px solid #fca5a5}
+.al-a{background:var(--aml);color:var(--amb);border:1px solid #fcd34d}
+.al-g{background:var(--gl);color:var(--gb);border:1px solid #86efac}
+/* Badges */
+.bdg{display:inline-flex;align-items:center;font-size:11px;padding:4px 10px;border-radius:7px;font-family:var(--fm);font-weight:500}
+.bdg-g{background:var(--gx);color:var(--gb)}.bdg-b{background:var(--bll);color:var(--blb)}.bdg-a{background:var(--aml);color:var(--amb)}.bdg-r{background:var(--rdl);color:var(--rdb)}.bdg-p{background:var(--ppl);color:var(--ppb)}
+/* Progress */
+.pb{height:8px;background:var(--s2);border-radius:4px;overflow:hidden;margin:6px 0}.pbf{height:100%;border-radius:4px;transition:width .6s ease;background:linear-gradient(90deg,var(--g),#4ade80)}
+/* Grid */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.fb{display:flex;gap:8px;flex-wrap:wrap}
+/* Mission steps */
+.ms{display:flex;gap:14px;padding:14px 16px;border-radius:12px;margin-bottom:6px;border:1.5px solid var(--b1);background:var(--bg);transition:all .25s;cursor:pointer;align-items:center;box-shadow:var(--sh)}
+.ms:active{transform:scale(.985)}.ms.done{border-color:#86efac;background:var(--gl);box-shadow:none}
+.ms-n{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:var(--fm);flex-shrink:0;border:2px solid var(--b1);color:var(--t4);background:var(--s1)}
+.ms.done .ms-n{background:var(--g);border-color:var(--g);color:#fff;font-size:16px;animation:msCheck .35s}
+.ms-body{flex:1;min-width:0}.ms-t{font-weight:700;font-size:14px}.ms.done .ms-t{color:var(--gb);text-decoration:line-through;text-decoration-color:rgba(22,163,74,.3)}
+.ms-d{font-size:12px;color:var(--t3);margin-top:2px}
+@keyframes msCheck{0%{transform:scale(.5);opacity:0}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+/* Stat blocks */
+.stat{text-align:center;padding:14px 8px;background:var(--bg);border-radius:12px;border:1px solid var(--b1);box-shadow:var(--sh)}
+.stat-v{font-size:18px;font-weight:800;font-family:var(--fm)}.stat-l{font-size:9px;color:var(--t4);font-family:var(--fm);letter-spacing:1.5px;margin-top:3px;font-weight:500}
+/* Directive */
+.dir{padding:20px 22px;border-radius:16px;margin-bottom:14px;background:linear-gradient(135deg,var(--gl),var(--bll));border:1.5px solid #86efac;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(22,163,74,.08)}
+.dir.warn{background:linear-gradient(135deg,var(--rdl),var(--aml));border-color:#fca5a5;box-shadow:0 4px 16px rgba(220,38,38,.08)}
+.dir.info{background:linear-gradient(135deg,var(--aml),var(--bll));border-color:#fcd34d}
+.dir-ic{font-size:22px;margin-bottom:6px}.dir-t{font-size:17px;font-weight:800;color:var(--t);line-height:1.4}.dir-sub{font-size:13px;color:var(--t2);margin-top:5px;line-height:1.5}
+/* Streak */
+.str{display:flex;gap:6px;justify-content:center;margin:12px 0}
+.str-d{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--fm);cursor:pointer;flex-direction:column;gap:1px;transition:all .15s}
+.str-d:active{transform:scale(.93)}
+.str-on{background:var(--gx);border:2px solid #86efac;color:var(--gb)}
+.str-off{background:var(--s2);border:2px solid var(--b1);color:var(--t4)}
+.str-now{border-color:var(--g)!important;box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.str-sel{box-shadow:0 0 0 3px rgba(124,58,237,.2)!important;border-color:var(--pp)!important}
+.str-dt{font-size:10px;font-weight:500;color:var(--t4)}
+/* Macro bar */
+.mbar{height:22px;background:var(--s2);border-radius:11px;overflow:hidden;display:flex;margin:6px 0}.mbar-s{height:100%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;font-family:var(--fm);transition:width .4s}
+/* Quick log pills */
+.ql{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.ql::-webkit-scrollbar{display:none}
+.ql-b{flex-shrink:0;padding:10px 16px;border-radius:10px;border:1.5px solid var(--b1);background:var(--bg);color:var(--t3);font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap;box-shadow:var(--sh)}
+.ql-b.on{border-color:#86efac;background:var(--gl);color:var(--gb)}
+/* Date quick-pick */
+.dp{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.dp-b{padding:8px 14px;border-radius:8px;border:1.5px solid var(--b1);background:var(--bg);color:var(--t3);font-size:12px;font-weight:600;cursor:pointer}
+.dp-b.on{background:var(--gl);color:var(--gb);border-color:#86efac}
+/* Meal slot */
+.mslot{padding:10px 14px;border-radius:10px;margin-bottom:6px;border:1px solid var(--b1);background:var(--bg);display:flex;justify-content:space-between;align-items:center}
+/* Meal preset grid */
+.mp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.mp{padding:12px;border-radius:12px;border:1.5px solid var(--b1);background:var(--bg);cursor:pointer;transition:all .15s;text-align:center;box-shadow:var(--sh);position:relative}
+.mp:active{transform:scale(.95)}.mp.logged{border-color:#86efac;background:var(--gl)}.mp.logged::after{content:'✓';position:absolute;top:6px;right:8px;font-size:14px;color:var(--gb);font-weight:700}
+.mp-ic{font-size:24px;margin-bottom:4px}.mp-n{font-weight:700;font-size:13px;line-height:1.3}.mp-m{font-size:11px;color:var(--t3);margin-top:3px;font-family:var(--fm)}
+/* Protein counter */
+.pc{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px;background:var(--bg);border:1.5px solid var(--b1);border-radius:14px;margin-bottom:12px;box-shadow:var(--sh)}
+.pc-btn{width:44px;height:44px;border-radius:12px;border:2px solid var(--b1);background:var(--s1);color:var(--t);font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .1s;font-family:var(--fm)}
+.pc-btn:active{transform:scale(.9);background:var(--gl);border-color:#86efac}
+.pc-v{text-align:center}.pc-num{font-size:36px;font-weight:800;font-family:var(--fm)}.pc-lbl{font-size:11px;color:var(--t4);font-family:var(--fm);letter-spacing:2px;margin-top:2px}
+/* Setup */
+.setup{max-width:480px;margin:0 auto;padding:40px 20px}.setup h2{font-size:22px;font-weight:800;margin-bottom:8px}.setup p{color:var(--t2);margin-bottom:20px}.setup ol{padding-left:20px;margin-bottom:20px;color:var(--t2);line-height:2}
+.rb{background:var(--bg);border:1.5px solid var(--b1);border-radius:16px;padding:28px;cursor:pointer;text-align:left;min-width:180px;transition:all .2s;outline:none;box-shadow:var(--sh)}
+.rb:hover{transform:translateY(-2px);box-shadow:var(--sh2)}
+/* Modal */
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:90;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.mdl{background:var(--bg);border:1px solid var(--b1);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:var(--sh2)}
+/* Session row */
+.srow{padding:10px 0;border-bottom:1px solid var(--s2);display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.srow:last-child{border-bottom:none}
+/* Animations */
+@keyframes fadeUp{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+.anim{animation:fadeUp .3s ease both}.anim-1{animation-delay:.05s}.anim-2{animation-delay:.1s}.anim-3{animation-delay:.15s}
+@media(max-width:600px){.rb{min-width:140px;padding:20px}}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="app"></div>
+<script>
+/* ========== CONSTANTS ========== */
+var PH=[{id:1,a:"Right Foot & Gait",g:"Retrain nervous system. Break guarding pattern.",gt:"Flat-footed walking, no tingling",wr:"No impact loading. Tingling = stop."},{id:2,a:"Pelvis & Lumbar",g:"Release hip overload. Stabilize pelvis.",gt:"Sciatic reduced, hip stable",wr:"No loaded hip flexor stretches."},{id:3,a:"Wrist & Elbow",g:"Stabilize wrist. Reduce scar tissue.",gt:"Wrist stable, elbow handles moderate grip",wr:"Brace ALL upper body."},{id:4,a:"Full Integration",g:"Reintroduce full training. One move/week.",gt:"All areas cleared",wr:"Monitor nerve symptoms. Regress if present."}];
+var PR={1:[["No lower body beyond BW","Seated/supine"],["No single-leg right","Bilateral"],["No running","Upper body cardio"]],2:[["No loaded hip flexor","Gentle stretch"],["No lunges under load","BW bridges"],["No cross-legged","Supine piriformis"]],3:[["No pressing until assessed","Cable neutral"],["No loaded wrist ext/rot","Neutral + wraps"],["Brace during upper body",""]],4:[["One move/week MAX",""],["Monitor nerve symptoms","Regress"]]};
+var EX={1:{s:[["Wall Ankle Mobility","3x30s"],["Calf Stretch","3x30s"],["Towel Toe Curl","3x10"],["Barefoot Standing","5min"]],e:[["Single Leg Balance (R)","3x30s"],["Heel-to-Toe Walk","2x2 lengths"],["Foot Circles","2x10ea"],["Short Foot","1x10"]]},2:{s:[["Supine Piriformis","3x45s"],["Hip Flexor Kneeling","3x30s"],["Knee-to-Chest","2x30s"],["Cat-Cow","1x10"]],e:[["Glute Bridges","3x15"],["Clamshells","3x15ea"],["Dead Bug","3x8ea"],["Hip Abduction","3x12"]]},3:{w:[["Wrist Neutral Holds","3x30s-2m"],["Forearm Pron/Sup","3x10"],["Grip Strength","3x10"],["Wrist Stabilizer","3x30s"]],el:[["Scar Massage","1x2min"],["Wrist Ext Stretch","3x30s"],["Eccentric Wrist Lower","3x10"],["Grip to Open","3x20"]]},4:{steps:["One movement/week","Jarrett sign-off","Monitor nerve symptoms","EM therapy continues"]}};
+var DV=[{a:"Right Foot",md:"Mode 4 Cup",it:"8-12/20",du:"15-20m",fr:"3x/wk",ph:1,stop:"Tingling >5 min"},{a:"Lumbar/Pelvis",md:"Mode 4 Cup",it:"12/20",du:"15-20m",fr:"2x/wk",ph:2,stop:"Calf numb >2 min"},{a:"Left Wrist",md:"Mode 2 Acu",it:"2-3/20",du:"10-15m",fr:"2x/wk",ph:3,stop:"Ring/pinky cramp"},{a:"Right Elbow",md:"Mode 2 Acu",it:"2/20",du:"15-20m",fr:"2x/wk",ph:0,stop:"Finger flick"}];
+var SPLIT=[
+{day:1,name:"Push",ex:["DB Flat Press (neutral+wraps) 4x8-12","Incline DB Press 3x10-12","Cable Laterals 4x12-15","Cable Flyes 3x12-15","Band Pull-Aparts 3x15-20","Neutral Tri Ext 3x12-15"]},
+{day:2,name:"Pull + Neck",ex:["Lat Pulldown 4x8-12","Seated Cable Row 4x10-12","Face Pulls 3x15-20","Hammer Curls 3x10-12","Neck Curls (plate) 3x15","Neck Extensions (plate) 3x15","Lateral Neck Flex (L) 2x12","Lateral Neck Flex (R) 2x12","Dead Hang 2x30-60s"]},
+{day:3,name:"Legs (Glute/Ham)",ex:["Barbell Glute Bridges 4x10-12","Light RDL 3x10-12","Leg Curl 4x12-15","Leg Press (partial) 3x12-15","Calf Raises (L only) 3x15-20","Hip Abduction 3x12"]},
+{day:4,name:"Upper Hyper",ex:["Machine Chest Press 3x12-15","Cable Laterals 4x15-20","Close Grip Row 3x12-15","Rear Delt Flyes 3x15-20","Preacher Curl 3x12-15","Neutral Tri Push 3x12-15"]},
+{day:5,name:"Legs (Quad)",ex:["Leg Extension 4x12-15","Goblet Squat (light) 3x10-12","Walking Lunges (BW) 3x12ea","Leg Press 3x12-15","Adductors 3x15","BW Glute Bridges 3x15"]},
+{day:6,name:"Recovery",ex:["Walk 20-30 min","Foam Roll 10 min","Stretching Protocol 15 min","Band Face Pulls 2x20"]}];
+
+var NECK=[
+{n:"Neck Curls (Flexion)",s:"3x15",eq:"Weight plate on forehead",note:"Lying face-up. Controlled tempo. Start light."},
+{n:"Neck Extensions",s:"3x15",eq:"Weight plate on back of head",note:"Lying face-down. Same tempo as curls."},
+{n:"Lateral Neck Flex (Left)",s:"2x12",eq:"Manual resistance or band",note:"Slow and controlled. Do not force range."},
+{n:"Lateral Neck Flex (Right)",s:"2x12",eq:"Manual resistance or band",note:"Match reps and load to left side."},
+{n:"Dead Hang (Decompression)",s:"2x30-60s",eq:"Pull-up bar",note:"Decompresses spine. Add as finisher."}
+];
+
+/* Macro targets from handbook — 158lb bodyweight */
+var MACRO_RANGES={
+train:{cal:"2700-3400",p:"190-237",c:"316-474",f:"63-95"},
+rest:{cal:"2200-2800",p:"190-237",c:"237-316",f:"63-95"}
+};
+var SUPPS=[{n:"Creatine",d:"5g post-workout",p:1},{n:"Vitamin D3",d:"4000IU w/ fat",p:1},{n:"Zinc",d:"30mg evening",p:1},{n:"Magnesium",d:"400mg before bed",p:1},{n:"Ashwagandha",d:"600mg",p:2},{n:"Omega-3",d:"2-3g",p:2},{n:"Boron",d:"6-10mg AM",p:2},{n:"Rhodiola",d:"200-400mg AM",p:3}];
+var MEALS=[{t:"7:00",n:"Breakfast",m:"P+C",tip:"30-40g protein + complex carbs"},{t:"10:00",n:"Snack",m:"P+F",tip:"Greek yogurt + nuts"},{t:"12:30",n:"Lunch",m:"P+C",tip:"Lean protein + rice/potato + veg"},{t:"15:00",n:"Pre-Workout",m:"P+C",tip:"40-60g carbs + 20-30g protein"},{t:"17:30",n:"Post-Workout",m:"P+C+Cr",tip:"60-100g fast carbs + 30-40g protein + creatine"},{t:"20:00",n:"Dinner",m:"P+C/F",tip:"Protein + veg + moderate carbs"},{t:"22:00",n:"Before Bed",m:"Casein",tip:"Casein or cottage cheese"}];
+var RF=[["Wrist","Dislocation, sharp pain, swelling"],["Foot","Constant tingling walking"],["Sciatica","Numbness >30min lying flat"],["Elbow","Lost grip / can't extend fingers"],["Any","Electric pain >2 min after stop"]];
+
+/* Meal Presets — tap to log */
+var PRESETS=[
+{n:"Eggs + Oats",ic:"&#129370;",cal:500,p:35,c:50,f:18,slot:"Breakfast"},
+{n:"Protein Shake",ic:"&#129380;",cal:250,p:40,c:15,f:5,slot:"Snack"},
+{n:"Chicken + Rice",ic:"&#127835;",cal:550,p:45,c:55,f:12,slot:"Lunch"},
+{n:"Greek Yogurt + Nuts",ic:"&#129371;",cal:300,p:25,c:15,f:18,slot:"Snack"},
+{n:"Steak + Potato",ic:"&#129385;",cal:650,p:50,c:45,f:22,slot:"Dinner"},
+{n:"Salmon + Veg",ic:"&#127843;",cal:500,p:42,c:20,f:22,slot:"Dinner"},
+{n:"PWO Shake + Rice",ic:"&#9889;",cal:600,p:40,c:80,f:8,slot:"Post-Workout"},
+{n:"Cottage Cheese",ic:"&#127858;",cal:200,p:28,c:8,f:5,slot:"Before Bed"},
+{n:"Protein Bar",ic:"&#127851;",cal:280,p:20,c:30,f:10,slot:"Snack"},
+{n:"Burrito Bowl",ic:"&#127790;",cal:620,p:40,c:65,f:18,slot:"Lunch"},
+{n:"Pasta + Meat Sauce",ic:"&#127837;",cal:580,p:35,c:70,f:15,slot:"Dinner"},
+{n:"PB&J + Milk",ic:"&#129386;",cal:520,p:25,c:60,f:20,slot:"Snack"}
+];
+var mealNutMode="quick"; /* quick | custom */
+
+/* ========== STATE ========== */
+var db=null,dbRef=null,doneRef=null,isOnline=false;
+function mkD(){return{currentPhase:1,phaseHistory:[],bodyWeight:"158",goalMode:"bulk",calorieTarget:"2600",proteinTarget:"190",carbTarget:"300",fatTarget:"70",sleepTarget:"8",sessions:[],exerciseLogs:[],mealLogs:[],workoutLogs:[],sleepLogs:[],weightLogs:[],suppLogs:[],clearedMovements:[],completedDays:[],version:"3.1",lastUpdated:new Date().toISOString()}}
+var D=mkD(),role,tab="cmd",logMode="meal",cfm=null;
+var done={ex:[],dv:[],date:""};
+var logDate=null; // null = today
+var viewDay=null; // streak day click
+
+/* ========== FIREBASE ========== */
+function getConfig(){try{return JSON.parse(localStorage.getItem("jt-fb-cfg"))}catch(e){return null}}
+function saveConfig(c){localStorage.setItem("jt-fb-cfg",JSON.stringify(c))}
+function initFirebase(cfg){try{firebase.initializeApp(cfg);db=firebase.database();dbRef=db.ref("jarrett/data");doneRef=db.ref("jarrett/done");
+dbRef.on("value",function(snap){var v=snap.val();if(v){D=Object.assign(mkD(),v);isOnline=true;render()}});
+doneRef.child(td()).on("value",function(snap){var v=snap.val();if(v)done=Object.assign({},v,{date:td()});else done={ex:[],dv:[],date:td()};render()});
+db.ref(".info/connected").on("value",function(snap){isOnline=snap.val()===true;render()});
+isOnline=true}catch(e){fl("Firebase error","warn")}}
+function sv(){D.lastUpdated=new Date().toISOString();if(dbRef)dbRef.set(D);else try{localStorage.setItem("jt-loc",JSON.stringify(D))}catch(e){}}
+function svDone(){done.date=td();if(doneRef)doneRef.child(td()).set(done);else try{localStorage.setItem("jt-done-loc",JSON.stringify(done))}catch(e){}}
+
+/* ========== UTILS ========== */
+function sR(r){role=r;localStorage.setItem("jt-role",r)}
+function ldRole(){role=localStorage.getItem("jt-role")||null}
+function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
+function fD(d){try{return new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}catch(e){return"-"}}
+function td(){return new Date().toLocaleDateString("en-CA",{timeZone:"America/New_York"})}
+function dA(d,n){try{return(Date.now()-new Date(d+"T12:00:00").getTime())/864e5<=n}catch(e){return false}}
+function etNow(){var s=new Date().toLocaleString("en-US",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false});var p=s.match(/(\d+)\/(\d+)\/(\d+)/);return{y:+p[3],m:+p[1]-1,d:+p[2],hr:+(s.match(/(\d+):/)||[])[1]||0}}
+function dayDt(o){var n=etNow();var dt=new Date(n.y,n.m,n.d-o);return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0")}
+function dayN(o){return["Su","Mo","Tu","We","Th","Fr","Sa"][new Date(etNow().y,etNow().m,etNow().d-o).getDay()]}
+function hr(){return etNow().hr}
+function activeLogDate(){return logDate||td()}
+var tT;function fl(m,t){t=t||"ok";var el=document.getElementById("toast");el.innerHTML=m;el.className=t;clearTimeout(tT);tT=setTimeout(function(){el.className=""},2500)}
+function tAcc(id){var b=document.getElementById("ab-"+id),i=document.getElementById("ai-"+id);if(b){b.classList.toggle("open");if(i)i.classList.toggle("open")}}
+function gEAll(p){if(p<=2)return[].concat(EX[p].s||[],EX[p].e||[]);if(p===3)return[].concat(EX[3].w||[],EX[3].el||[]);return[]}
+function gEN(p){return gEAll(p).map(function(e){return e[0]})}
+
+/* ========== INTELLIGENCE ENGINE ========== */
+function getLastSleep(){return(D.sleepLogs||[]).filter(function(s){return s.date===td()||s.date===dayDt(1)}).sort(function(a,b){return b.date.localeCompare(a.date)})[0]}
+function getTodayMacros(){var m=(D.mealLogs||[]).filter(function(x){return x.date===td()});var r={cal:0,p:0,c:0,f:0};m.forEach(function(x){r.cal+= +(x.calories||0);r.p+= +(x.protein||0);r.c+= +(x.carbs||0);r.f+= +(x.fat||0)});return r}
+function getTodayWorkout(){return(D.workoutLogs||[]).filter(function(w){return w.date===td()})[0]}
+function getLastPain(){var w=(D.workoutLogs||[]).sort(function(a,b){return b.date.localeCompare(a.date)})[0];return w? +(w.pain||0):0}
+function isTrainingDay(){var dow=new Date().getDay();return dow>=1&&dow<=6}
+function getMacroTargets(){var base={cal: +(D.calorieTarget||2600),p: +(D.proteinTarget||190),c: +(D.carbTarget||300),f: +(D.fatTarget||70)};if(!isTrainingDay()){base.cal=Math.round(base.cal*0.85);base.c=Math.round(base.c*0.65)}return base}
+function getStreak(){var all={};(D.sessions||[]).forEach(function(s){all[s.date]=1});(D.exerciseLogs||[]).forEach(function(s){all[s.date]=1});(D.workoutLogs||[]).forEach(function(s){all[s.date]=1});var streak=0;for(var i=0;i<60;i++){if(all[dayDt(i)])streak++;else break}return streak}
+function getSuppsDone(){return(D.suppLogs||[]).filter(function(s){return s.date===td()}).map(function(s){return s.name})}
+function canLog(){var tS=(D.sessions||[]).filter(function(s){return s.date===td()});if(tS.length>=3)return{ok:false,msg:"3 sessions today"};return{ok:true}}
+function devStatus(){var tS=(D.sessions||[]).filter(function(s){return s.date===td()});if(!tS.length)return{locked:false,msg:"Ready"};var last=tS[tS.length-1];var hrs=(Date.now()-(last.id||0))/36e5;if(hrs>=4)return{locked:false,msg:"Ready"};if(tS.length>=3)return{locked:true,msg:"Max reached"};var rm=Math.ceil((4-hrs)*60);return{locked:false,cooldown:true,msg:rm+"m cooldown"}}
+function getSplitToday(){var dow=new Date().getDay();if(dow===0)return SPLIT[5];return SPLIT[(dow-1)%6]}
+
+function getDirective(){
+var h=hr(),ph=D.currentPhase||1,sl=getLastSleep(),mac=getTodayMacros(),tgt=getMacroTargets(),wk=getTodayWorkout(),suppsDone=getSuppsDone(),pain=getLastPain();
+var dex=(done.ex||[]).length,ddv=(done.dv||[]).length,exAll=gEAll(ph),dvDue=DV.filter(function(d){return d.ph===0||d.ph<=ph});
+if(sl&&parseFloat(sl.hours)<6)return{ic:"&#9888;",t:"Sleep was "+sl.hours+"hr. Deload today.",sub:"Cut training volume 30%. Focus on recovery and food.",type:"warn"};
+if(pain>=7)return{ic:"&#128680;",t:"Pain level "+pain+"/10 last session.",sub:"Skip gym. Active recovery only. Check if this is a red flag.",type:"warn"};
+if(h<8){if(!sl)return{ic:"&#127769;",t:"Log last night's sleep.",sub:"Tap Log → Sleep. This drives today's training decisions.",type:"info"};
+return{ic:"&#9728;&#65039;",t:"Take supplements + eat breakfast.",sub:Math.round(tgt.p*0.2)+"g protein target for meal 1. "+suppsDone.length+"/"+SUPPS.length+" supps taken.",type:"ok"}}
+if(h<14){if(!wk&&isTrainingDay())return{ic:"&#127947;&#65039;",t:"Time to train. Today: "+getSplitToday().name,sub:"Pre-workout meal 60-90min before. "+Math.round(tgt.c*0.15)+"g carbs + 25g protein.",type:"ok"};
+if(mac.p<tgt.p*0.4)return{ic:"&#127860;",t:"Protein at "+mac.p+"g — need "+tgt.p+"g today.",sub:"Next meal: prioritize lean protein. You're "+Math.round(tgt.p-mac.p)+"g behind.",type:"info"}}
+if(h<18){if(wk&&mac.cal<tgt.cal*0.5)return{ic:"&#128293;",t:"Post-workout: eat now.",sub:"60-100g fast carbs + 30-40g protein + creatine. Highest growth window.",type:"ok"};
+var exLeft=exAll.length-dex,dvLeft=dvDue.length-ddv;
+if(exLeft>0||dvLeft>0)return{ic:"&#9889;",t:exLeft+" exercises + "+dvLeft+" device sessions left.",sub:"Complete recovery protocol before evening.",type:"info"}}
+if(h>=18){if(mac.cal<tgt.cal*0.75)return{ic:"&#127860;",t:"Only "+mac.cal+"/"+tgt.cal+" cal. Eat dinner now.",sub:(tgt.cal-mac.cal)+" cal remaining. Don't skip — you're in a "+(D.goalMode||"bulk")+".",type:"warn"};
+if(mac.p<tgt.p*0.8)return{ic:"&#129472;",t:"Protein at "+mac.p+"/"+tgt.p+"g.",sub:"Casein or cottage cheese before bed.",type:"info"};
+return{ic:"&#127769;",t:"Wind down. Pre-sleep protocol in 90 min.",sub:"Magnesium, screens off, room 65-68°F.",type:"ok"}}
+return{ic:"&#10003;",t:"Everything on track.",sub:"Keep executing.",type:"ok"}}
+
+/* ========== COMPONENTS ========== */
+function C(h,c){return'<div class="cd '+(c||'')+'">'+h+'</div>'}
+function L(t,c){return'<div class="lbl '+(c||'')+'">'+t+'</div>'}
+function A(id,title,body,open){return'<div class="cd"><div class="ac-h" onclick="tAcc(\''+id+'\')"><span class="h3">'+title+'</span><span class="ac-i'+(open?' open':'')+'" id="ai-'+id+'">&#9660;</span></div><div class="ac-b'+(open?' open':'')+'" id="ab-'+id+'"><div style="padding-top:10px">'+body+'</div></div></div>'}
+function Al(t,m){var ic=t==="warn"?"&#9888;&#65039;":t==="info"?"&#128161;":"&#10003;";return'<div class="al al-'+(t==="warn"?"r":t==="info"?"a":"g")+'"><span style="font-size:16px;flex-shrink:0">'+ic+'</span><span>'+m+'</span></div>'}
+function Pb(p){return'<div class="pb"><div class="pbf" style="width:'+Math.min(100,Math.max(0,p))+'%"></div></div>'}
+function Stat(v,l,col){return'<div class="stat"><div class="stat-v" style="color:'+(col||"var(--t)")+'">'+v+'</div><div class="stat-l">'+l+'</div></div>'}
+function MacroBar(p,c,f){var t=p+c+f||1;return'<div class="mbar"><div class="mbar-s" style="width:'+Math.round(p/t*100)+'%;background:#ef4444">P</div><div class="mbar-s" style="width:'+Math.round(c/t*100)+'%;background:#3b82f6">C</div><div class="mbar-s" style="width:'+Math.round(f/t*100)+'%;background:#f59e0b">F</div></div>'}
+function DatePick(){var d=activeLogDate(),h='<div class="dp">';
+h+='<button class="dp-b'+(d===td()?" on":"")+'" onclick="logDate=null;render()">Today</button>';
+h+='<button class="dp-b'+(d===dayDt(1)?" on":"")+'" onclick="logDate=\''+dayDt(1)+'\';render()">Yesterday</button>';
+h+='<button class="dp-b'+(d===dayDt(2)?" on":"")+'" onclick="logDate=\''+dayDt(2)+'\';render()">2 days ago</button>';
+h+='<input type="date" class="dp-b" value="'+d+'" max="'+td()+'" onchange="logDate=this.value;render()" style="font-family:var(--fm);cursor:pointer">';
+h+='</div>';
+if(d!==td())h+='<div style="font-size:12px;color:var(--pp);font-weight:600;margin-bottom:10px">&#128197; Logging for: '+fD(d)+'</div>';
+return h}
+
+/* ========== COMMAND TAB ========== */
+function rCmd(){
+var ph=D.currentPhase||1;
+var dir=getDirective();
+var mac=getTodayMacros(),tgt=getMacroTargets();
+var sl=getLastSleep(),slHrs=sl?parseFloat(sl.hours):0;
+var wk=getTodayWorkout(),streak=getStreak();
+var suppsDone=getSuppsDone();
+var exAll=gEAll(ph),dvDue=DV.filter(function(d){return d.ph===0||d.ph<=ph});
+var dex=(done.ex||[]).length,ddv=(done.dv||[]).length;
+var totalTasks=exAll.length+dvDue.length,doneTasks=dex+ddv;
+var pct=totalTasks?Math.round(doneTasks/totalTasks*100):0;
+var calPct=Math.min(100,Math.round(mac.cal/tgt.cal*100));
+var proPct=Math.min(100,Math.round(mac.p/tgt.p*100));
+var h='';
+
+// AUTO-MODIFICATIONS
+var mods=[];
+if(sl&&slHrs<7)mods.push("&#128164; Sleep was "+slHrs+"hr — reduce training volume 20%");
+if(getLastPain()>=5)mods.push("&#128680; Pain "+getLastPain()+"/10 — check modifications before training");
+var wl=(D.weightLogs||[]).sort(function(a,b){return a.date.localeCompare(b.date)});
+if(wl.length>=4){var recent=wl.slice(-4);var f= +recent[0].weight,la= +recent[recent.length-1].weight;if(Math.abs(la-f)<0.5)mods.push("&#9878; Weight stagnant — add 200-300 kcal from carbs")}
+if(mods.length)h+=mods.map(function(m){return Al("warn",m)}).join("");
+
+// DIRECTIVE
+h+='<div class="dir '+(dir.type==="warn"?"warn":dir.type==="info"?"info":"")+' anim"><div class="dir-ic">'+dir.ic+'</div><div class="dir-t">'+dir.t+'</div><div class="dir-sub">'+dir.sub+'</div></div>';
+
+// DAILY STATS
+h+='<div class="g4 anim anim-1">';
+h+=Stat(mac.cal+'/'+tgt.cal,"KCAL",calPct>=85?"var(--g)":calPct>=50?"var(--am)":"var(--rd)");
+h+=Stat(mac.p+'g','PROTEIN',proPct>=85?"var(--g)":proPct>=50?"var(--am)":"var(--rd)");
+h+=Stat(slHrs||"—","SLEEP",slHrs>=7.5?"var(--g)":slHrs>=7?"var(--am)":"var(--rd)");
+h+=Stat(doneTasks+"/"+totalTasks,"REHAB",pct>=80?"var(--g)":"var(--am)");
+h+='</div>';
+
+// MACRO BAR
+h+='<div class="cd anim anim-1" style="padding:12px 16px">'+MacroBar(mac.p*4,mac.c*4,mac.f*9)+'<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--t4);font-family:var(--fm)"><span>P:'+mac.p+'/'+tgt.p+'g</span><span>C:'+mac.c+'/'+tgt.c+'g</span><span>F:'+mac.f+'/'+tgt.f+'g</span></div></div>';
+
+// STREAK
+h+='<div class="anim anim-2"><div class="str">';
+var allD={};(D.sessions||[]).forEach(function(s){allD[s.date]=1});(D.exerciseLogs||[]).forEach(function(s){allD[s.date]=1});(D.workoutLogs||[]).forEach(function(s){allD[s.date]=1});
+for(var i=6;i>=0;i--){var d=dayDt(i);
+h+='<div class="str-d '+(allD[d]?"str-on":"str-off")+(i===0?" str-now":"")+(viewDay===d?" str-sel":"")+'" onclick="viewDay=viewDay===\''+d+'\'?null:\''+d+'\';render()"><span>'+dayN(i)+'</span><span class="str-dt">'+parseInt(d.split("-")[2])+'</span></div>'}
+h+='</div><div style="text-align:center;font-size:12px;color:var(--t4);font-family:var(--fm)">'+streak+' day streak'+(isTrainingDay()?' &middot; <span style="color:var(--g)">Training Day</span>':' &middot; <span style="color:var(--bl)">Rest Day</span>')+'</div></div>';
+
+// DAY DETAIL (when tapping a streak day)
+if(viewDay){
+var dvSess=(D.sessions||[]).filter(function(s){return s.date===viewDay});
+var exLogs=(D.exerciseLogs||[]).filter(function(s){return s.date===viewDay});
+var wkLog=(D.workoutLogs||[]).filter(function(w){return w.date===viewDay});
+var slLog=(D.sleepLogs||[]).filter(function(s){return s.date===viewDay});
+var dayLabel=fD(viewDay);
+h+='<div class="cd cd-p anim" style="border-width:2px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div class="h3">'+dayLabel+'</div><button class="bx btn" style="padding:6px 12px;font-size:11px" onclick="viewDay=null;render()">&#10005;</button></div>';
+if(!dvSess.length&&!exLogs.length&&!wkLog.length&&!slLog.length)h+='<div class="dim" style="text-align:center;padding:12px">No entries this day.</div>';
+else{
+if(slLog.length)h+='<div class="srow"><span>&#128164; Sleep</span><span class="bdg bdg-b">'+slLog[0].hours+'hr Q:'+slLog[0].quality+'</span></div>';
+if(wkLog.length){var w=wkLog[0];var sp=SPLIT.find(function(s){return s.day===w.day})||{name:"?"};h+='<div class="srow"><span>&#128170; '+sp.name+'</span><span class="bdg bdg-g">'+w.duration+'min E:'+w.energy+' P:'+w.pain+'</span></div>'}
+if(dvSess.length)dvSess.forEach(function(s){h+='<div class="srow"><span>&#9889; '+esc(s.area)+'</span><span class="dim">'+esc(s.mode)+' '+esc(s.intensity)+'</span></div>'});
+if(exLogs.length)exLogs.forEach(function(e){h+='<div class="srow"><span>&#9650; '+(e.completed||[]).length+' exercises</span><span class="dim">P'+(e.phase||"?")+'</span></div>'})
+}h+='</div>'}
+
+// TODAY'S GYM
+if(isTrainingDay()&&!wk){var sp=getSplitToday();
+h+=A("gym","&#127947;&#65039; "+sp.name,'<div style="font-size:13px">'+sp.ex.map(function(e){return'<div style="padding:6px 0;border-bottom:1px solid var(--s2);color:var(--t2)">'+esc(e)+'</div>'}).join("")+'</div><button class="btn bg bf" style="margin-top:12px" onclick="tab=\'log\';logMode=\'workout\';render()">Log This Workout</button>',false)}
+else if(wk){h+=C('<div style="display:flex;justify-content:space-between;align-items:center"><div class="h3" style="color:var(--gb)">&#10003; Workout Done</div><span class="bdg bdg-g">'+wk.duration+'min &middot; E:'+wk.energy+' P:'+wk.pain+'</span></div>','cd-g')}
+
+// SUPPLEMENTS
+h+=A("supps","&#128138; Supplements ("+getSuppsDone().length+"/"+SUPPS.length+")",SUPPS.map(function(s){var tk=getSuppsDone().indexOf(s.n)>=0;return'<div class="ms'+(tk?" done":"")+'" onclick="tckSupp(\''+esc(s.n)+'\')"><div class="ms-n">'+(tk?"&#10003;":"&#128138;")+'</div><div class="ms-body"><div class="ms-t">'+esc(s.n)+'</div><div class="ms-d">'+esc(s.d)+'</div></div></div>'}).join(""),false);
+
+// RECOVERY CHECKLIST
+h+='<div class="cd anim anim-3"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div class="lbl lg" style="margin-bottom:0">RECOVERY &middot; PHASE '+ph+'</div><span class="bdg '+(pct>=80?"bdg-g":"bdg-a")+'">'+doneTasks+'/'+totalTasks+'</span></div>'+Pb(pct);
+if(exAll.length){h+='<div style="margin:10px 0 6px" class="lbl lb">EXERCISES</div>';exAll.forEach(function(e){var d=(done.ex||[]).indexOf(e[0])>=0;h+='<div class="ms'+(d?" done":"")+'" onclick="tckEx(\''+esc(e[0])+'\')"><div class="ms-n">'+(d?"&#10003;":"&bull;")+'</div><div class="ms-body"><div class="ms-t">'+esc(e[0])+'</div><div class="ms-d">'+esc(e[1])+'</div></div></div>'})}
+h+='<div style="margin:14px 0 6px" class="lbl lg">DEVICE SESSIONS</div>';
+var dvSt=devStatus();dvDue.forEach(function(d){var dn=(done.dv||[]).indexOf(d.a)>=0;var lk=dvSt.locked&&!dn;
+h+='<div class="ms'+(dn?" done":"")+'" onclick="'+(lk?"fl(\'"+esc(dvSt.msg)+"\',\'warn\')":"tckDv(\'"+esc(d.a)+"\')")+'"><div class="ms-n">'+(dn?"&#10003;":lk?"&#128274;":"&#9889;")+'</div><div class="ms-body"><div class="ms-t">'+esc(d.a)+(dvSt.cooldown&&!dn?' <span style="font-size:11px;color:var(--am)">'+dvSt.msg+'</span>':"")+'</div><div class="ms-d">'+esc(d.md)+' &middot; '+esc(d.it)+' &middot; '+esc(d.du)+'</div></div></div>'});
+h+='<div style="margin-top:12px"><div class="ac-h" onclick="tAcc(\'restr\')"><span style="font-size:12px;color:var(--rd)">&#9888; Restrictions</span><span class="ac-i" id="ai-restr">&#9660;</span></div><div class="ac-b" id="ab-restr">'+(PR[ph]||[]).map(function(r){return'<div style="padding:3px 0;font-size:12px;color:var(--rdb)">&#10005; '+esc(r[0])+(r[1]?' <span style="color:var(--g)">→ '+esc(r[1])+'</span>':"")+'</div>'}).join("")+'</div></div></div>';
+
+// NEXT MEAL
+var curHr=hr();var nextMeal=MEALS.find(function(m){return parseInt(m.t)>curHr})||MEALS[0];
+h+=C('<div style="display:flex;justify-content:space-between;align-items:center"><div><div class="lbl la" style="margin-bottom:2px">NEXT MEAL &middot; '+nextMeal.t+'</div><div class="h3">'+nextMeal.n+'</div><div class="dim" style="margin-top:2px">'+nextMeal.tip+'</div></div><span class="bdg bdg-a">'+nextMeal.m+'</span></div>');
+return h}
+
+function tckEx(n){if(!done.ex)done.ex=[];var i=done.ex.indexOf(n);if(i>=0)done.ex.splice(i,1);else{done.ex.push(n);fl("&#10003; "+n,"ok")}svDone();render()}
+function tckDv(n){var chk=canLog();if(!chk.ok){fl(chk.msg,"warn");return}if(!done.dv)done.dv=[];var i=done.dv.indexOf(n);if(i>=0)done.dv.splice(i,1);else{done.dv.push(n);fl("&#9889; "+n,"ok")}svDone();render()}
+function tckSupp(n){D.suppLogs=(D.suppLogs||[]);var ex=D.suppLogs.filter(function(s){return s.date===td()&&s.name===n});if(ex.length)D.suppLogs=D.suppLogs.filter(function(s){return!(s.date===td()&&s.name===n)});else{D.suppLogs.push({date:td(),name:n,id:Date.now()});fl("&#128138; "+n,"ok")}sv();render()}
+
+/* ========== LOG TAB ========== */
+function rLog(){
+var h='<div class="ql">';
+["meal","workout","sleep","device","weight"].forEach(function(m){
+var ic={meal:"&#127860;",workout:"&#128170;",sleep:"&#128164;",device:"&#9889;",weight:"&#9878;"}[m];
+h+='<button class="ql-b'+(logMode===m?" on":"")+'" onclick="logMode=\''+m+'\';render()">'+ic+' '+m.charAt(0).toUpperCase()+m.slice(1)+'</button>'});
+h+='</div>';
+
+// Date picker (except weight which is always today)
+if(logMode!=="weight")h+=DatePick();
+var ld=activeLogDate();
+
+if(logMode==="meal"){
+var dayMeals=(D.mealLogs||[]).filter(function(m){return m.date===ld});
+var dm={cal:0,p:0,c:0,f:0};dayMeals.forEach(function(m){dm.cal+= +(m.calories||0);dm.p+= +(m.protein||0);dm.c+= +(m.carbs||0);dm.f+= +(m.fat||0)});
+var tgt=getMacroTargets();
+var calPct=Math.min(100,Math.round(dm.cal/tgt.cal*100));
+var proPct=Math.min(100,Math.round(dm.p/tgt.p*100));
+
+// Progress header
+h+='<div class="cd" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div><span style="font-size:22px;font-weight:800;font-family:var(--fm);color:'+(calPct>=85?"var(--g)":calPct>=50?"var(--am)":"var(--rd)")+'">'+dm.cal+'</span><span style="font-size:13px;color:var(--t4)"> / '+tgt.cal+' kcal</span></div><div><span style="font-size:22px;font-weight:800;font-family:var(--fm);color:'+(proPct>=85?"var(--g)":proPct>=50?"var(--am)":"var(--rd)")+'">'+dm.p+'g</span><span style="font-size:13px;color:var(--t4)"> / '+tgt.p+'g P</span></div></div>'+Pb(calPct)+'</div>';
+
+// Mode toggle
+h+='<div class="fb" style="margin-bottom:12px"><button class="tg'+(mealNutMode==="quick"?" on":"")+'" style="flex:1;text-align:center" onclick="mealNutMode=\'quick\';render()">&#9889; Quick Log</button><button class="tg'+(mealNutMode==="custom"?" on":"")+'" style="flex:1;text-align:center" onclick="mealNutMode=\'custom\';render()">&#9998; Custom</button></div>';
+
+if(mealNutMode==="quick"){
+// Protein counter
+h+='<div class="pc"><button class="pc-btn" onclick="adjProtein(-10)">-</button><div class="pc-v"><div class="pc-num" style="color:'+(proPct>=85?"var(--g)":"var(--t)")+'">'+dm.p+'</div><div class="pc-lbl">PROTEIN (g)</div></div><button class="pc-btn" onclick="adjProtein(10)">+</button></div>';
+h+='<div style="display:flex;justify-content:center;gap:6px;margin-bottom:14px">';
+[5,10,20,30,40].forEach(function(v){h+='<button style="padding:6px 12px;border-radius:8px;border:1.5px solid var(--b1);background:var(--bg);font-size:12px;font-weight:700;font-family:var(--fm);color:var(--t3);cursor:pointer" onclick="adjProtein('+v+')">+'+v+'g</button>'});
+h+='</div>';
+
+// Preset meal grid
+h+=L("TAP TO LOG","lg");
+var loggedIds=dayMeals.map(function(m){return m.presetIdx});
+h+='<div class="mp-grid">';
+PRESETS.forEach(function(p,i){
+var logged=loggedIds.indexOf(i)>=0;
+h+='<div class="mp'+(logged?" logged":"")+'" onclick="logPreset('+i+')"><div class="mp-ic">'+p.ic+'</div><div class="mp-n">'+esc(p.n)+'</div><div class="mp-m">'+p.cal+' &middot; '+p.p+'g P</div></div>'});
+h+='</div>';
+
+}else{
+// Custom entry (simplified — name + cal + protein only required)
+h+=C(L("CUSTOM MEAL","lg")+'<div class="g2" style="margin-top:8px"><div><label class="il">What</label><input class="inp" id="ml-n" placeholder="Chicken+Rice"></div><div><label class="il">Calories</label><input class="inp" id="ml-cal" type="number" placeholder="500"></div></div><div class="g2" style="margin-top:8px"><div><label class="il">Protein (g)</label><input class="inp" id="ml-p" type="number" placeholder="40"></div><div><label class="il">Carbs (g) <span style="color:var(--t4);font-weight:400">optional</span></label><input class="inp" id="ml-c" type="number" placeholder="—"></div></div><div style="margin-top:8px"><label class="il">Fat (g) <span style="color:var(--t4);font-weight:400">optional</span></label><input class="inp" id="ml-f" type="number" placeholder="—" style="max-width:50%"></div><button class="btn bg bf" style="margin-top:10px" onclick="saveMealCustom()">Save Meal</button>')}
+
+// Today's logged meals
+if(dayMeals.length){
+h+='<div style="margin-top:8px">'+L("LOGGED TODAY","lb");
+dayMeals.forEach(function(m){
+h+='<div class="cd" style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600;font-size:13px">'+esc(m.name||"Meal")+'</div><div class="dim" style="font-size:11px">'+m.calories+' kcal &middot; '+m.protein+'g P</div></div><button style="background:none;border:none;color:var(--t4);font-size:14px;cursor:pointer" onclick="delEntry(\'mealLogs\','+m.id+')">&#10005;</button></div>'});
+h+='</div>'}}
+
+else if(logMode==="workout"){
+var sp=getSplitToday();
+h+=C(L("TODAY: "+sp.name.toUpperCase(),"lb")+'<div style="margin-top:8px;font-size:13px;color:var(--t2)">'+sp.ex.join(' &rarr; ')+'</div>');
+h+=C('<div class="g2"><div><label class="il">Duration (min)</label><input class="inp" id="wk-dur" type="number" placeholder="75"></div><div><label class="il">Energy (1-10)</label><input class="inp" id="wk-e" type="number" placeholder="7"></div></div><div class="g2" style="margin-top:8px"><div><label class="il">Pain (0-10)</label><input class="inp" id="wk-p" type="number" placeholder="3"></div><div><label class="il">Day</label><select class="sel" id="wk-d">'+SPLIT.map(function(s){return'<option value="'+s.day+'">D'+s.day+': '+s.name+'</option>'}).join("")+'</select></div></div><div style="margin-top:8px"><label class="il">Notes</label><textarea class="ta" id="wk-n" placeholder="PRs, swaps, issues"></textarea></div><button class="btn bg bf" style="margin-top:10px" onclick="saveWorkout()">Save Workout</button>');
+// Recent history
+var wLogs=(D.workoutLogs||[]).sort(function(a,b){return b.date.localeCompare(a.date)}).slice(0,5);
+if(wLogs.length){h+='<div style="margin-top:12px">'+L("RECENT","lb");wLogs.forEach(function(w){var s=SPLIT.find(function(x){return x.day===w.day})||{name:"?"};h+='<div class="srow"><div><span class="bdg bdg-b" style="margin-right:4px">D'+w.day+'</span>'+s.name+'</div><span class="dim">'+fD(w.date)+' &middot; '+w.duration+'m E:'+w.energy+' P:'+w.pain+'</span></div>'});h+='</div>'}}
+
+else if(logMode==="sleep"){
+var sl=getLastSleep();
+h+=C('<div class="g2"><div><label class="il">Hours</label><input class="inp" id="sl-h" type="number" step="0.5" placeholder="7.5" value="'+(sl&&sl.date===ld?sl.hours:"")+'"></div><div><label class="il">Quality (1-10)</label><input class="inp" id="sl-q" type="number" placeholder="7" value="'+(sl&&sl.date===ld?sl.quality:"")+'"></div></div><div class="g2" style="margin-top:8px"><div><label class="il">Bedtime</label><input class="inp" id="sl-b" type="time" value="'+(sl&&sl.date===ld?sl.bedtime||"":"")+'"></div><div><label class="il">HRV</label><input class="inp" id="sl-hrv" type="number" placeholder="45" value="'+(sl&&sl.date===ld?sl.hrv||"":"")+'"></div></div><button class="btn bb bf" style="margin-top:10px" onclick="saveSleep()">Save Sleep</button>');
+h+=A("psp","&#127769; Pre-Sleep Protocol",["Magnesium 400mg","Screens off / night mode","Room 65-68°F","No food 2hr (except casein)","Deep breathing / prayer"].map(function(p){return'<div class="ms" onclick="this.classList.toggle(\'done\')" style="margin-bottom:4px;padding:10px 14px"><div class="ms-n" style="width:28px;height:28px;font-size:12px">&#127769;</div><div class="ms-body"><div class="ms-t" style="font-size:13px">'+p+'</div></div></div>'}).join(""),false);
+// Sleep history
+var sLogs=(D.sleepLogs||[]).sort(function(a,b){return b.date.localeCompare(a.date)}).slice(0,7);
+if(sLogs.length){h+='<div style="margin-top:12px">'+L("RECENT","lb");sLogs.forEach(function(s){var hrs=parseFloat(s.hours||0);h+='<div class="srow"><div><span class="bdg '+(hrs>=7.5?"bdg-g":hrs>=7?"bdg-a":"bdg-r")+'">'+s.hours+'hr</span> <span class="dim">Q:'+(s.quality||"—")+'</span></div><span class="dim">'+fD(s.date)+'</span></div>'});h+='</div>'}}
+
+else if(logMode==="device"){
+h+=C('<div class="g2"><div><label class="il">Area</label><select class="sel" id="dv-a">'+["Right Foot","Lumbar/Pelvis","Left Wrist","Right Elbow"].map(function(a){return"<option>"+a+"</option>"}).join("")+'</select></div><div><label class="il">Mode</label><input class="inp" id="dv-m" placeholder="Mode 4 Cupping"></div></div><div class="g2" style="margin-top:8px"><div><label class="il">Intensity</label><input class="inp" id="dv-i" placeholder="12/20"></div><div><label class="il">Duration</label><input class="inp" id="dv-d" placeholder="15 min"></div></div><div style="margin-top:8px"><label class="il">Feedback</label><textarea class="ta" id="dv-f" placeholder="What did you feel?"></textarea></div><button class="btn bg bf" style="margin-top:10px" onclick="saveDevice()">Save Device Session</button>');
+h+=C(L("STOP SIGNALS","lr")+DV.map(function(d){return'<div style="padding:3px 0;font-size:12px;color:var(--rdb)">'+esc(d.a)+': '+esc(d.stop)+'</div>'}).join(""));
+var dLogs=(D.sessions||[]).sort(function(a,b){return b.date.localeCompare(a.date)}).slice(0,5);
+if(dLogs.length){h+='<div style="margin-top:8px">'+L("RECENT","lg");dLogs.forEach(function(s){h+='<div class="srow"><div><span class="bdg bdg-g" style="margin-right:4px">'+esc(s.area)+'</span>'+esc(s.mode)+'</div><span class="dim">'+fD(s.date)+'</span></div>'});h+='</div>'}}
+
+else if(logMode==="weight"){
+var wl=(D.weightLogs||[]).sort(function(a,b){return b.date.localeCompare(a.date)});var last=wl[0];
+h+=C('<div style="text-align:center;margin-bottom:12px"><div style="font-size:34px;font-weight:800;font-family:var(--fm)">'+(last?last.weight:D.bodyWeight||"158")+' lbs</div><div class="dim">'+(last?"Updated "+fD(last.date):"Baseline")+" &middot; "+(D.goalMode||"bulk").toUpperCase()+'</div></div><div style="display:flex;gap:8px"><input class="inp" id="bw" type="number" step="0.5" placeholder="160" style="flex:1"><button class="btn bg" onclick="saveWeight()">Save</button></div>');
+if(wl.length>=2){var vis=wl.slice(0,14).reverse();var mn=Math.min.apply(null,vis.map(function(w){return+w.weight})),mx=Math.max.apply(null,vis.map(function(w){return+w.weight}));var rng=mx-mn||1;
+h+='<div style="margin-top:14px">'+L("TREND","lb")+'<div style="display:flex;gap:3px;align-items:flex-end;height:60px;margin-top:8px">';vis.forEach(function(w){var p=((+w.weight-mn)/rng)*100;h+='<div style="flex:1;background:linear-gradient(var(--g),#4ade80);border-radius:3px 3px 0 0;height:'+Math.max(10,p)+'%;opacity:.7" title="'+w.weight+'lbs '+fD(w.date)+'"></div>'});
+var diff=Math.round((+wl[0].weight - +vis[0].weight)*10)/10;h+='</div><div style="text-align:center;margin-top:8px;font-size:13px;font-family:var(--fm);color:'+(diff>0?"var(--g)":"var(--rd)")+'">'+(diff>0?"+":"")+diff+' lbs over '+vis.length+' entries</div></div>'}}
+return h}
+
+function logPreset(i){var p=PRESETS[i];D.mealLogs=(D.mealLogs||[]);
+// Toggle: if already logged this preset today, remove it
+var existing=D.mealLogs.filter(function(m){return m.date===activeLogDate()&&m.presetIdx===i});
+if(existing.length){D.mealLogs=D.mealLogs.filter(function(m){return!(m.date===activeLogDate()&&m.presetIdx===i)});sv();fl("Removed "+p.n);render();return}
+D.mealLogs.push({date:activeLogDate(),name:p.n,calories:p.cal,protein:p.p,carbs:p.c,fat:p.f,time:p.slot,presetIdx:i,id:Date.now()});sv();fl(p.ic+" "+p.n+" logged","ok");render()}
+function adjProtein(amt){D.mealLogs=(D.mealLogs||[]);
+// Find or create today's protein-only entry
+var existing=D.mealLogs.filter(function(m){return m.date===activeLogDate()&&m.name==="Protein (manual)"});
+if(existing.length){existing[0].protein=Math.max(0, +(existing[0].protein||0)+amt);existing[0].calories=Math.round(existing[0].protein*5.5);sv();fl(amt>0?"+"+amt+"g protein":"Adjusted","ok");render();return}
+if(amt<=0)return;
+D.mealLogs.push({date:activeLogDate(),name:"Protein (manual)",calories:Math.round(amt*5.5),protein:amt,carbs:0,fat:0,time:"Manual",id:Date.now()});sv();fl("+"+amt+"g protein","ok");render()}
+function saveMealCustom(){var cal= +(document.getElementById("ml-cal")||{}).value;var pro= +(document.getElementById("ml-p")||{}).value;if(!cal&&!pro){fl("Enter calories or protein","warn");return}D.mealLogs=(D.mealLogs||[]);D.mealLogs.push({date:activeLogDate(),name:(document.getElementById("ml-n")||{}).value||"Custom Meal",calories:cal||Math.round(pro*5.5),protein:pro||0,carbs: +(document.getElementById("ml-c")||{}).value||0,fat: +(document.getElementById("ml-f")||{}).value||0,time:"Custom",id:Date.now()});sv();fl("&#127860; Saved","ok");render()}
+function saveWorkout(){var dur= +(document.getElementById("wk-dur")||{}).value;if(!dur){fl("Enter duration","warn");return}D.workoutLogs=(D.workoutLogs||[]);D.workoutLogs.push({date:activeLogDate(),day: +(document.getElementById("wk-d")||{}).value||1,duration:dur,energy: +(document.getElementById("wk-e")||{}).value||0,pain: +(document.getElementById("wk-p")||{}).value||0,notes:(document.getElementById("wk-n")||{}).value||"",id:Date.now()});sv();fl("&#128170; Saved","ok");render()}
+function saveSleep(){var h=(document.getElementById("sl-h")||{}).value;if(!h){fl("Enter hours","warn");return}var ld=activeLogDate();D.sleepLogs=(D.sleepLogs||[]).filter(function(s){return s.date!==ld});D.sleepLogs.push({date:ld,hours:h,quality:(document.getElementById("sl-q")||{}).value||"",bedtime:(document.getElementById("sl-b")||{}).value||"",hrv:(document.getElementById("sl-hrv")||{}).value||"",id:Date.now()});sv();fl("&#128164; Saved","ok");render()}
+function saveDevice(){var m=(document.getElementById("dv-m")||{}).value;if(!m){fl("Enter mode","warn");return}if(activeLogDate()===td()){var chk=canLog();if(!chk.ok){fl(chk.msg,"warn");return}}D.sessions=(D.sessions||[]);D.sessions.push({date:activeLogDate(),area:(document.getElementById("dv-a")||{}).value||"",mode:m,intensity:(document.getElementById("dv-i")||{}).value||"",duration:(document.getElementById("dv-d")||{}).value||"",feedback:(document.getElementById("dv-f")||{}).value||"",id:Date.now()});sv();fl("&#9889; Saved","ok");render()}
+function saveWeight(){var w=(document.getElementById("bw")||{}).value;if(!w){fl("Enter weight","warn");return}D.weightLogs=(D.weightLogs||[]);D.weightLogs.push({date:td(),weight:w,id:Date.now()});D.bodyWeight=w;sv();fl("&#9878; "+w+"lbs","ok");render()}
+function delEntry(key,id){D[key]=(D[key]||[]).filter(function(x){return x.id!==id});sv();fl("Deleted");render()}
+
+/* ========== TRENDS TAB + PHASE READINESS ========== */
+function rTrends(){
+var h="",ph=D.currentPhase||1,isO=role==="owner";
+var ss14=(D.sessions||[]).filter(function(s){return dA(s.date,14)});
+var ss7=(D.sessions||[]).filter(function(s){return dA(s.date,7)});
+var wk14=(D.workoutLogs||[]).filter(function(w){return dA(w.date,14)});
+var wk7=(D.workoutLogs||[]).filter(function(w){return dA(w.date,7)});
+var sl14=(D.sleepLogs||[]).filter(function(s){return dA(s.date,14)});
+var sl7=(D.sleepLogs||[]).filter(function(s){return dA(s.date,7)});
+var ml14=(D.mealLogs||[]).filter(function(m){return dA(m.date,14)});
+var ml7=(D.mealLogs||[]).filter(function(m){return dA(m.date,7)});
+var avgSleep=sl7.length?Math.round(sl7.reduce(function(s,l){return s+parseFloat(l.hours||0)},0)/sl7.length*10)/10:0;
+var avgEnergy=wk7.length?Math.round(wk7.reduce(function(s,w){return s+ +(w.energy||0)},0)/wk7.length*10)/10:0;
+var avgPain=wk7.length?Math.round(wk7.reduce(function(s,w){return s+ +(w.pain||0)},0)/wk7.length*10)/10:0;
+var calByDay={};ml7.forEach(function(m){calByDay[m.date]=(calByDay[m.date]||0)+ +(m.calories||0)});var calDays=Object.keys(calByDay);
+var avgCal=calDays.length?Math.round(calDays.reduce(function(s,d){return s+calByDay[d]},0)/calDays.length):0;
+// Protein compliance (last 7 days)
+var proDays={};ml7.forEach(function(m){proDays[m.date]=(proDays[m.date]||0)+ +(m.protein||0)});
+var proTarget= +(D.proteinTarget||190);
+var proDaysArr=Object.keys(proDays);
+var proDaysHit=proDaysArr.filter(function(d){return proDays[d]>=proTarget*0.85}).length;
+var proCompliance=proDaysArr.length?Math.round(proDaysHit/proDaysArr.length*100):0;
+// Supplement compliance
+var suppTarget=8;/*total supps*/var supp7=(D.suppLogs||[]).filter(function(s){return dA(s.date,7)});
+var suppDays={};supp7.forEach(function(s){suppDays[s.date]=(suppDays[s.date]||0)+1});
+var suppAvg=Object.keys(suppDays).length?Math.round(Object.keys(suppDays).reduce(function(s,d){return s+suppDays[d]},0)/Object.keys(suppDays).length/suppTarget*100):0;
+
+h+=L("THIS WEEK","lg");
+h+='<div class="g4">'+Stat(avgSleep||"—","SLEEP",avgSleep>=7.5?"var(--g)":avgSleep>=7?"var(--am)":"var(--rd)")+Stat(avgEnergy||"—","ENERGY",avgEnergy>=7?"var(--g)":"var(--am)")+Stat(avgPain||"—","PAIN",avgPain<=3?"var(--g)":avgPain<=6?"var(--am)":"var(--rd)")+Stat(avgCal||"—","AVG CAL",avgCal>=2400?"var(--g)":"var(--am)")+'</div>';
+h+='<div class="g3" style="margin-top:8px">'+Stat(wk7.length,"WORKOUTS","var(--bl)")+Stat(ss7.length,"DEVICE","var(--g)")+Stat(getStreak(),"STREAK","var(--am)")+'</div>';
+
+/* ========== PHASE READINESS ASSESSMENT (auto-calculated) ========== */
+var checks=[],passed=0,total=0;
+// 1. Pain levels — all below 5/10 consistently (14-day)
+var painOk=true;
+if(wk14.length>=3){var allPains=wk14.map(function(w){return +(w.pain||0)});var maxPain=Math.max.apply(null,allPains);var avgP14=Math.round(allPains.reduce(function(a,b){return a+b},0)/allPains.length*10)/10;painOk=avgP14<5&&maxPain<7;checks.push({name:"Pain levels <5/10 avg",ok:painOk,val:avgP14+"/10 avg, max "+maxPain})}
+else checks.push({name:"Pain levels <5/10 avg",ok:false,val:"Need 3+ workouts logged (have "+wk14.length+")"});total++;if(painOk&&wk14.length>=3)passed++;
+
+// 2. PT protocol executing (exercise completion — 14-day)
+var exLogs14=(D.exerciseLogs||[]).filter(function(s){return dA(s.date,14)});
+var exDays={};exLogs14.forEach(function(e){exDays[e.date]=1});
+var exActive=Object.keys(exDays).length;
+var exOk=exActive>=8;
+checks.push({name:"PT exercises 8+ of 14 days",ok:exOk,val:exActive+"/14 days"});total++;if(exOk)passed++;
+
+// 3. Device session compliance (14-day)
+var devTargets={"Right Foot":3,"Lumbar/Pelvis":2,"Left Wrist":2,"Right Elbow":2};
+var devByArea14={};ss14.forEach(function(s){devByArea14[s.area]=(devByArea14[s.area]||0)+1});
+var dvAreas=DV.filter(function(d){return d.ph===0||d.ph<=ph});
+var devOk=true;var devDetail=[];
+dvAreas.forEach(function(d){var target=Math.round((devTargets[d.a]||2)*2);/*2 weeks*/var actual=devByArea14[d.a]||0;var ok=actual>=target*0.7;if(!ok)devOk=false;devDetail.push(d.a+": "+actual+"/"+target)});
+checks.push({name:"Device sessions on target",ok:devOk,val:devDetail.join(", ")});total++;if(devOk)passed++;
+
+// 4. Sleep averaging 7.5+ hrs
+var sleepOk=avgSleep>=7.5&&sl7.length>=4;
+checks.push({name:"Sleep avg 7.5+ hrs",ok:sleepOk,val:avgSleep?avgSleep+"hr avg ("+sl7.length+" logs)":"No sleep data"});total++;if(sleepOk)passed++;
+
+// 5. No pain spikes (no single session pain 7+)
+var noPainSpike=true;
+wk14.forEach(function(w){if(+(w.pain||0)>=7)noPainSpike=false});
+checks.push({name:"No pain spikes (7+/10)",ok:noPainSpike,val:noPainSpike?"No spikes":"Pain 7+ detected"});total++;if(noPainSpike)passed++;
+
+// 6. Supplement compliance 80%+
+var suppOkCheck=suppAvg>=80;
+checks.push({name:"Supplement compliance 80%+",ok:suppOkCheck,val:suppAvg+"%"});total++;if(suppOkCheck)passed++;
+
+// 7. Weight trending (not dropping)
+var wl14=(D.weightLogs||[]).filter(function(w){return dA(w.date,14)}).sort(function(a,b){return a.date.localeCompare(b.date)});
+var wtOk=true,wtVal="No data";
+if(wl14.length>=2){var first14= +wl14[0].weight,last14= +wl14[wl14.length-1].weight;var wtDiff=Math.round((last14-first14)*10)/10;wtOk=wtDiff>=-1;wtVal=(wtDiff>=0?"+":"")+wtDiff+" lbs"}
+checks.push({name:"Weight not dropping",ok:wtOk,val:wtVal});total++;if(wtOk)passed++;
+
+var readyPct=Math.round(passed/total*100);
+var isReady=passed===total&&wk14.length>=6;
+var nextPh=ph<4?ph+1:null;
+
+h+='<div class="cd '+(isReady?"cd-g":"cd-a")+'" style="margin-top:16px;border-width:2px;padding:22px">';
+h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div>'+L("PHASE READINESS","lg")+'<div class="h2">Phase '+ph+' → '+(nextPh?"Phase "+nextPh:"Complete")+'</div></div><div style="text-align:center"><div style="font-size:28px;font-weight:800;font-family:var(--fm);color:'+(isReady?"var(--g)":"var(--am)")+'">'+readyPct+'%</div><div style="font-size:10px;color:var(--t4);font-family:var(--fm)">'+passed+'/'+total+' PASS</div></div></div>';
+
+if(isReady)h+='<div class="al al-g" style="margin-bottom:12px"><span style="font-size:16px">&#9989;</span><span><strong>READY to advance.</strong> All criteria met. Gate: '+PH[ph-1].gt+'</span></div>';
+else h+='<div class="al al-a" style="margin-bottom:12px"><span style="font-size:16px">&#128161;</span><span><strong>NOT READY</strong> — '+(total-passed)+' criteria still failing. Review items below.</span></div>';
+
+checks.forEach(function(c){
+h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--s2);font-size:13px"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px">'+(c.ok?"&#9989;":"&#10060;")+'</span><span style="font-weight:600">'+c.name+'</span></div><span class="bdg bdg-'+(c.ok?"g":"r")+'">'+c.val+'</span></div>'});
+h+='<div style="margin-top:12px;padding:12px;background:var(--s1);border-radius:10px"><div style="font-size:12px;font-family:var(--fm);color:var(--t4);letter-spacing:1px;margin-bottom:4px">GATE CRITERIA</div><div style="font-size:14px;font-weight:600">'+PH[ph-1].gt+'</div><div class="dim" style="margin-top:4px">'+PH[ph-1].wr+'</div></div></div>';
+
+/* ========== VA MONITORING (Owner only) ========== */
+if(isO){
+h+='<div class="cd cd-p" style="margin-top:14px;border-width:2px">';
+h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+L("VA MONITORING DASHBOARD","lp")+'<span class="bdg bdg-p">QUEENE</span></div>';
+
+var vaFlags=[];
+// Protein check (weekly)
+if(proCompliance<70)vaFlags.push({t:"r",m:"&#129472; Protein compliance "+proCompliance+"% this week. Send updated grocery list: Greek yogurt, cottage cheese, chicken, eggs. Suggest adding one protein snack."});
+else if(proCompliance<90)vaFlags.push({t:"a",m:"&#129472; Protein compliance "+proCompliance+"%. Close but inconsistent — check if he's skipping post-workout meals."});
+else vaFlags.push({t:"g",m:"&#129472; Protein compliance "+proCompliance+"%. On target."});
+
+// Weight stagnation check
+if(wl14.length>=3){
+var firstW= +wl14[0].weight,lastW= +wl14[wl14.length-1].weight;
+if(Math.abs(lastW-firstW)<0.5)vaFlags.push({t:"r",m:"&#9878; Weight stagnant ("+firstW+"→"+lastW+" lbs over 2 weeks). Action: Add 200-300 kcal from carbs (rice, oats, potato). Update calorie target in Settings."});
+else if(lastW<firstW-1)vaFlags.push({t:"r",m:"&#9878; Weight DROPPING ("+firstW+"→"+lastW+" lbs). He's not eating enough. This is a bulk — flag immediately."});
+else vaFlags.push({t:"g",m:"&#9878; Weight trending up ("+firstW+"→"+lastW+" lbs). Bulk on track."});
+}else vaFlags.push({t:"a",m:"&#9878; Need 3+ weight entries in 14 days to assess trend. Currently: "+wl14.length});
+
+// Sleep check
+if(avgSleep>0&&avgSleep<7)vaFlags.push({t:"r",m:"&#128164; Sleep averaging "+avgSleep+"hr. Reduce training volume 20% this week. Check: bedtime consistency, room temp, screen time."});
+var lowSleepNights=sl7.filter(function(s){return parseFloat(s.hours)<7}).length;
+if(lowSleepNights>=3)vaFlags.push({t:"r",m:"&#128164; "+lowSleepNights+" nights under 7hr this week. Flag to Jarrett: sleep is killing his gains."});
+
+// Training consistency
+if(wk7.length<3)vaFlags.push({t:"r",m:"&#128170; Only "+wk7.length+" workouts this week. Check Jarrett's schedule and adjust split if needed."});
+var painWarn=wk14.filter(function(w){return +(w.pain||0)>=5});
+if(painWarn.length>=2)vaFlags.push({t:"r",m:"&#128680; "+painWarn.length+" sessions with pain 5+/10 in 14 days. Check if exercises need swapping. If same movement 3+ weeks, escalate injury."});
+
+// Supplement stock
+if(suppAvg<60)vaFlags.push({t:"a",m:"&#128138; Supplement compliance "+suppAvg+"%. Check stock — flag anything that needs reordering."});
+
+// IF check (rest days only)
+var restDayWorkouts=wk7.filter(function(w){
+var d=new Date(w.date+"T12:00:00").getDay();return d===0});
+// No flag needed, just advisory
+
+// Device compliance
+if(!devOk)vaFlags.push({t:"a",m:"&#9889; Device sessions below target this period. "+devDetail.join("; ")+"."});
+
+vaFlags.forEach(function(f){h+=Al(f.t==="r"?"warn":f.t==="a"?"info":"ok",f.m)});
+
+h+='<div style="margin-top:12px;padding:12px;background:var(--s1);border-radius:10px;font-size:12px;color:var(--t3)"><div style="font-weight:700;margin-bottom:6px">VA WEEKLY CHECKLIST</div>';
+h+='<div style="padding:3px 0">&#9744; Monday: Review training log, input bodyweight + pain levels</div>';
+h+='<div style="padding:3px 0">&#9744; Wednesday: Check protein target compliance (above)</div>';
+h+='<div style="padding:3px 0">&#9744; Friday: Generate weekly summary, build next week schedule</div>';
+h+='<div style="padding:3px 0">&#9744; Sunday: Prep training plan, send grocery list, review sleep/HRV</div>';
+h+='</div></div>'}
+
+/* ========== STANDARD RECOMMENDATIONS ========== */
+h+='<div style="margin-top:14px">'+L("SYSTEM RECOMMENDATIONS","la");
+var recs=[];
+if(avgSleep>0&&avgSleep<7)recs.push({t:"r",m:"Sleep averaging "+avgSleep+"hr. Fix schedule."});
+if(avgSleep>=7.5)recs.push({t:"g",m:"Sleep on target ("+avgSleep+"hr avg)."});
+if(avgPain>0&&avgPain>=5)recs.push({t:"r",m:"Pain averaging "+avgPain+"/10. Check modifications."});
+if(avgPain>0&&avgPain<=3)recs.push({t:"g",m:"Pain manageable ("+avgPain+"/10 avg)."});
+if(avgCal>0&&avgCal<2200)recs.push({t:"r",m:"Undereating ("+avgCal+" cal avg). Eat more."});
+if(wk7.length<3)recs.push({t:"a",m:"Only "+wk7.length+" workouts. Aim for 5."});
+if(wk7.length>=5)recs.push({t:"g",m:"Training consistency strong ("+wk7.length+")."});
+if(ss7.length<4)recs.push({t:"a",m:"Device sessions low ("+ss7.length+")."});
+if(!recs.length)recs.push({t:"g",m:"Need more data. Keep logging."});
+recs.forEach(function(r){h+=Al(r.t==="r"?"warn":r.t==="a"?"info":"ok",r.m)});h+='</div>';
+
+if(wk7.length){h+='<div style="margin-top:14px">'+L("RECENT WORKOUTS","lb");wk7.sort(function(a,b){return b.date.localeCompare(a.date)}).forEach(function(w){var sp=SPLIT.find(function(s){return s.day===w.day})||{name:"?"};h+='<div class="cd" style="padding:10px 14px"><div style="display:flex;justify-content:space-between"><div><span class="bdg bdg-b">D'+w.day+'</span> <span style="font-weight:600;font-size:13px;margin-left:4px">'+sp.name+'</span></div><span class="dim">'+fD(w.date)+'</span></div><div style="font-size:12px;color:var(--t3);margin-top:4px">'+w.duration+'min &middot; E:'+w.energy+' &middot; P:'+w.pain+(w.notes?' &middot; '+esc(w.notes):'')+'</div></div>'});h+='</div>'}
+return h}
+
+/* ========== REFERENCE TAB ========== */
+function rRef(){
+var h=L("REFERENCE LIBRARY","lp")+'<div class="dim" style="margin-bottom:12px">Detailed protocols. Read when needed, not daily.</div>';
+h+=A("ref-split","&#128170; Training Split (6-Day)",SPLIT.map(function(s){return'<div style="padding:8px 0;border-bottom:1px solid var(--s2)"><div style="font-weight:700;color:var(--blb);font-size:13px">Day '+s.day+': '+s.name+'</div><div style="font-size:12px;color:var(--t3);margin-top:4px">'+s.ex.join(' &rarr; ')+'</div></div>'}).join(""),false);
+
+// Neck Training Protocol
+h+=A("ref-neck","&#128170; Neck Training Protocol (Priority)",
+'<div style="font-size:13px;color:var(--t2);margin-bottom:10px">Goal: Build a visibly thicker neck. Programmed on Day 2 (Pull Day). <strong>Do not skip — priority weak point.</strong></div>'+
+NECK.map(function(n){return'<div style="padding:8px 0;border-bottom:1px solid var(--s2)"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h3" style="font-size:13px">'+n.n+'</div><span class="bdg bdg-b">'+n.s+'</span></div><div class="dim" style="margin-top:4px">'+n.eq+'</div><div style="font-size:12px;color:var(--t2);margin-top:2px">'+n.note+'</div></div>'}).join(""),false);
+
+// Metabolism Manipulation
+h+=A("ref-metab","&#128293; Metabolism Manipulation + Diet",
+'<div style="font-size:13px;color:var(--t2);margin-bottom:12px">Based on '+( D.bodyWeight||158)+' lbs bodyweight. Metabolism should work FOR muscle gain, not against it.</div>'+
+'<div style="padding:10px 14px;background:var(--gl);border-radius:10px;margin-bottom:10px;border:1px solid #86efac"><div class="lbl lg" style="margin-bottom:4px">TRAINING DAYS</div><div style="font-size:13px"><strong>Calories:</strong> '+MACRO_RANGES.train.cal+' kcal</div><div style="font-size:13px"><strong>Protein:</strong> '+MACRO_RANGES.train.p+'g (1.2-1.5g/lb) — non-negotiable</div><div style="font-size:13px"><strong>Carbs:</strong> '+MACRO_RANGES.train.c+'g (2-3g/lb)</div><div style="font-size:13px"><strong>Fats:</strong> '+MACRO_RANGES.train.f+'g (0.4-0.6g/lb)</div></div>'+
+'<div style="padding:10px 14px;background:var(--bll);border-radius:10px;margin-bottom:12px;border:1px solid #93c5fd"><div class="lbl lb" style="margin-bottom:4px">REST DAYS</div><div style="font-size:13px"><strong>Calories:</strong> '+MACRO_RANGES.rest.cal+' kcal</div><div style="font-size:13px"><strong>Protein:</strong> '+MACRO_RANGES.rest.p+'g — same as training</div><div style="font-size:13px"><strong>Carbs:</strong> '+MACRO_RANGES.rest.c+'g (reduce 30-40%)</div><div style="font-size:13px"><strong>Fats:</strong> '+MACRO_RANGES.rest.f+'g — same</div></div>'+
+L("STRATEGIES","la")+
+'<div style="padding:6px 0;font-size:13px"><strong style="color:var(--amb)">1. Carb Cycling</strong> — Higher carbs on training days for glycogen. Cut carbs 30-40% on rest days. Keeps metabolism elevated without fat gain.</div>'+
+'<div style="padding:6px 0;font-size:13px"><strong style="color:var(--amb)">2. Clean Bulk</strong> — Target 200-400 cal surplus on training days. If weight not increasing after 2 weeks → add 200-300 kcal from carbs.</div>'+
+'<div style="padding:6px 0;font-size:13px"><strong style="color:var(--amb)">3. Meal Timing</strong> — Pre-workout (60-90min): 40-60g carbs + 20-30g protein. Post-workout (30-60min): 60-100g fast carbs + 30-40g protein + creatine. Before bed: casein/cottage cheese.</div>'+
+'<div style="padding:6px 0;font-size:13px"><strong style="color:var(--amb)">4. IF (Optional)</strong> — 16:8, rest days only (3-5x/week). Do NOT schedule IF on heavy training days.</div>'+
+'<div style="padding:8px 12px;background:var(--rdl);border-radius:8px;margin-top:8px;font-size:12px;color:var(--rdb)"><strong>VA CHECK (Wednesday):</strong> Did Jarrett hit protein target? If not → send grocery list. If weight stagnant/dropping → not enough calories.</div>'
+,false);
+h+=A("ref-meals","&#127860; Meal Timing Guide",MEALS.map(function(m){return'<div class="mslot"><div><div style="font-size:11px;font-family:var(--fm);color:var(--t4)">'+m.t+' &middot; '+m.m+'</div><div style="font-weight:600;font-size:13px;margin-top:2px">'+m.n+'</div><div style="font-size:12px;color:var(--t3)">'+m.tip+'</div></div></div>'}).join(""),false);
+h+=A("ref-inj","&#129657; Injury Profiles",PH.map(function(p){return'<div style="padding:10px 0;border-bottom:1px solid var(--s2)"><div class="h3">P'+p.id+': '+p.a+'</div><div class="dim" style="margin-top:4px">'+p.g+'</div><div style="margin-top:4px;font-size:12px;color:var(--rdb)">&#9888; '+p.wr+'</div></div>'}).join(""),false);
+h+=A("ref-rf","&#128680; Red Flags — STOP",RF.map(function(r){return'<div style="padding:4px 0;font-size:13px;color:var(--rdb)"><span style="font-family:var(--fm);color:var(--t4);font-size:11px;margin-right:6px">'+r[0].toUpperCase()+'</span>'+r[1]+'</div>'}).join(""),false);
+h+=A("ref-supps","&#128138; Supplements",SUPPS.map(function(s){return'<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--s2)"><div><div style="font-weight:600;font-size:13px">'+s.n+'</div><div class="dim" style="font-size:11px">'+s.d+'</div></div><span class="bdg bdg-'+(s.p===1?"r":s.p===2?"a":"b")+'" style="font-size:10px">'+(s.p===1?"HIGH":s.p===2?"MED":"LOW")+'</span></div>'}).join(""),false);
+h+=A("ref-dev","&#9889; Device Protocols",DV.map(function(d){return'<div style="padding:8px 0;border-bottom:1px solid var(--s2)"><div style="display:flex;justify-content:space-between"><div class="h3" style="font-size:14px">'+d.a+'</div><span class="bdg bdg-g" style="font-size:10px">'+d.fr+'</span></div><div class="dim" style="margin-top:4px">'+d.md+' &middot; '+d.it+' &middot; '+d.du+'</div><div style="margin-top:4px;font-size:12px;color:var(--rdb)">STOP: '+d.stop+'</div></div>'}).join(""),false);
+h+=A("ref-ol","&#128640; Progressive Overload",["Add 5 lbs to the bar","Add 1-2 reps at current weight","Improve control/tempo/form"].map(function(r){return'<div style="padding:4px 0;font-size:13px;color:var(--gb)">&#9650; '+r+'</div>'}).join("")+'<div style="margin-top:8px;font-size:12px;color:var(--amb)">Zero progress 2+ weeks → check calories, protein, sleep.</div>',false);
+h+=A("ref-topt","&#128737; Testosterone Optimization",'<div class="lbl lr" style="margin-top:0">AVOID</div>'+["BPA plastics → glass/stainless","Parabens → paraben-free products","Sleep <7hr → 60-70% of T during sleep","Alcohol → suppresses T 24-48hr","Processed foods/seed oils → inflammation","Overtraining → cortisol crushes T","Prolonged sitting → move every 45 min"].map(function(d){return'<div style="padding:2px 0;font-size:12px;color:var(--rdb)">&#10005; '+d+'</div>'}).join(""),false);
+return h}
+
+/* ========== SETTINGS ========== */
+function rSet(){
+var h=L("SETTINGS"),ph=D.currentPhase||1;
+h+=C(L("GOAL","lg")+'<div class="fb" style="margin-top:6px"><button class="tg'+(D.goalMode==="bulk"?" on":"")+'" onclick="D.goalMode=\'bulk\';sv();render()">&#128170; Bulk</button><button class="tg'+(D.goalMode==="cut"?" on":"")+'" onclick="D.goalMode=\'cut\';sv();render()">&#128293; Cut</button></div>');
+h+=C(L("TARGETS","lb")+'<div class="g2" style="margin-top:6px"><div><label class="il">Calories</label><input class="inp" value="'+esc(D.calorieTarget||"")+'" onchange="D.calorieTarget=this.value;sv()" placeholder="2600"></div><div><label class="il">Protein</label><input class="inp" value="'+esc(D.proteinTarget||"")+'" onchange="D.proteinTarget=this.value;sv()" placeholder="190"></div><div><label class="il">Carbs</label><input class="inp" value="'+esc(D.carbTarget||"")+'" onchange="D.carbTarget=this.value;sv()" placeholder="300"></div><div><label class="il">Fat</label><input class="inp" value="'+esc(D.fatTarget||"")+'" onchange="D.fatTarget=this.value;sv()" placeholder="70"></div></div>');
+h+=C(L("PHASE CONTROL","lg")+'<div style="margin-top:6px"><div class="h3">Phase '+ph+': '+PH[ph-1].a+'</div><div class="dim" style="margin-top:4px">Gate: '+PH[ph-1].gt+'</div></div>'+(ph<4?(cfm!=="adv"?'<button class="btn bg" style="margin-top:10px" onclick="cfm=\'adv\';render()">Advance Phase →</button>':'<div style="margin-top:10px"><label class="il">Cleared movements:</label><textarea class="ta" id="adv-c"></textarea><label class="il" style="margin-top:8px;display:flex;gap:6px;cursor:pointer"><input type="checkbox" id="adv-ok"><span>Confirmed improvement</span></label><div class="fb" style="margin-top:8px"><button class="btn bg" onclick="doAdv('+ph+')">Confirm</button><button class="btn bx" onclick="cfm=null;render()">Cancel</button></div></div>'):'<div class="bdg bdg-g" style="margin-top:8px">Final Phase</div>'));
+h+=C(L("DATA")+'<div class="fb" style="margin-top:6px"><button class="btn bg" onclick="expD()">Export</button><label class="btn bb" style="cursor:pointer">Import<input type="file" accept=".json" style="display:none" onchange="impD(this)"></label></div>');
+h+=C(L("CONNECTION","lp")+'<div class="dim" style="margin-top:4px">'+(isOnline?"&#9989; Connected":"&#10060; Offline")+'</div><button class="btn bx" style="margin-top:8px" onclick="localStorage.removeItem(\'jt-fb-cfg\');location.reload()">Reconfigure</button>');
+h+='<div class="cd cd-r">'+L("DANGER","lr")+(cfm!=="reset"?'<button class="btn br" style="margin-top:6px" onclick="cfm=\'reset\';render()">Reset All</button>':'<div style="margin-top:8px"><div class="dim" style="color:var(--rdb)">Erase everything?</div><div class="fb" style="margin-top:6px"><button class="btn br" onclick="D=mkD();sv();cfm=null;fl(\'Reset\');render()">Yes</button><button class="btn bx" onclick="cfm=null;render()">No</button></div></div>')+'</div>';
+return h}
+function doAdv(pid){var ok=document.getElementById("adv-ok");if(!ok||!ok.checked){fl("Confirm improvement","warn");return}D.phaseHistory=(D.phaseHistory||[]);D.phaseHistory.push({phase:pid,clearedAt:new Date().toISOString(),movements:(document.getElementById("adv-c")||{}).value||""});D.currentPhase=pid+1;sv();cfm=null;done={ex:[],dv:[],date:td()};svDone();fl("Phase "+(pid+1)+" active");render()}
+function expD(){var b=new Blob([JSON.stringify(D,null,2)],{type:"application/json"});var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="jarrett_"+td()+".json";a.click()}
+function impD(inp){var f=inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){try{D=JSON.parse(e.target.result);sv();fl("Imported");render()}catch(err){fl("Invalid","warn")}};r.readAsText(f)}
+
+/* ========== RENDER ========== */
+function render(){
+var app=document.getElementById("app"),cfg=getConfig();
+if(!cfg){app.innerHTML=rSetup();return}
+if(!db&&!cfg.local)initFirebase(cfg);
+if(!role){ldRole();if(!role){app.innerHTML=rRole();return}}
+var isO=role==="owner";
+var tabs=[{id:"cmd",ic:"&#9889;",l:"Command"},{id:"log",ic:"&#128221;",l:"Log"},{id:"trends",ic:"&#128200;",l:"Trends"},{id:"ref",ic:"&#128218;",l:"Library"}];
+if(isO)tabs.push({id:"set",ic:"&#9881;",l:"Settings"});
+var h='<div class="tbar"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:17px;font-weight:800;letter-spacing:.5px">JARRETT</span><span class="bdg bdg-g">P'+(D.currentPhase||1)+'</span></div><div style="display:flex;align-items:center;gap:8px"><div style="display:flex;align-items:center;gap:4px;font-size:11px;font-family:var(--fm);color:var(--t4)"><div style="width:7px;height:7px;border-radius:50%;background:'+(isOnline?"var(--g)":"var(--rd)")+'"></div>'+(isOnline?"LIVE":"OFF")+'</div><button onclick="goHome()" style="background:var(--s1);border:1px solid var(--b1);padding:5px 12px;border-radius:8px;color:var(--t3);font-size:11px;font-weight:700;font-family:var(--fm)">'+(isO?"Q":"J")+'</button></div></div>';
+h+='<div class="body"><div class="wrap">';
+if(tab==="cmd")h+=rCmd();else if(tab==="log")h+=rLog();else if(tab==="trends")h+=rTrends();else if(tab==="ref")h+=rRef();else if(tab==="set")h+=rSet();
+h+='</div></div>';
+h+='<div class="bnav"><div class="bnav-in">';tabs.forEach(function(t){h+='<button class="bnav-b'+(tab===t.id?" on":"")+'" onclick="tab=\''+t.id+'\';render()"><div class="bnav-ic">'+t.ic+'</div>'+t.l+'</button>'});h+='</div></div>';
+app.innerHTML=h}
+function goHome(){role=null;localStorage.removeItem("jt-role");tab="cmd";render()}
+function rSetup(){return'<div class="mid"><div class="setup"><h2>&#128268; Connect Database</h2><p>Sync between Quenne and Jarrett in real time.</p><ol><li>Go to console.firebase.google.com</li><li>Create project → Realtime Database → Test mode</li><li>Project Settings → Add Web app → Copy config</li></ol><label class="il">API Key</label><input class="inp" id="cfg-key" placeholder="AIzaSy..."><label class="il" style="margin-top:8px">Database URL</label><input class="inp" id="cfg-url" placeholder="https://your-project.firebaseio.com"><button class="btn bg bf" style="margin-top:14px" onclick="doSetup()">Connect</button><div style="margin-top:12px;text-align:center"><button class="btn bx" onclick="doLocal()">Offline mode</button></div></div></div>'}
+function doSetup(){var k=document.getElementById("cfg-key"),u=document.getElementById("cfg-url");if(!k||!k.value||!u||!u.value){fl("Need API Key + URL","warn");return}saveConfig({apiKey:k.value,databaseURL:u.value});location.reload()}
+function doLocal(){saveConfig({local:true});render()}
+function rRole(){return'<div class="mid"><div style="text-align:center;max-width:400px"><div style="font-size:11px;font-family:var(--fm);letter-spacing:6px;color:var(--t4);margin-bottom:16px">COMMAND SYSTEM</div><h1 style="font-size:48px;font-weight:800;letter-spacing:-2px;margin:0 0 8px">JARRETT</h1><p style="color:var(--t3);font-size:14px;margin-bottom:32px">Recovery + Training + Nutrition + Sleep</p><div class="fb" style="justify-content:center;gap:14px"><button class="rb" onclick="sR(\'owner\');tab=\'cmd\';render()"><div style="font-size:11px;font-family:var(--fm);letter-spacing:2px;color:var(--g);margin-bottom:10px">OWNER</div><div style="font-size:18px;font-weight:800">Quenne</div><div style="font-size:12px;color:var(--t3);margin-top:8px">Phase control + settings</div></button><button class="rb" onclick="sR(\'jarrett\');tab=\'cmd\';render()"><div style="font-size:11px;font-family:var(--fm);letter-spacing:2px;color:var(--bl);margin-bottom:10px">ATHLETE</div><div style="font-size:18px;font-weight:800">Jarrett</div><div style="font-size:12px;color:var(--t3);margin-top:8px">Execute daily</div></button></div></div></div>'}
+var cfg=getConfig();
+if(cfg&&!cfg.local)initFirebase(cfg);
+else if(cfg&&cfg.local){try{D=JSON.parse(localStorage.getItem("jt-loc"))||mkD()}catch(e){D=mkD()}try{var dd=JSON.parse(localStorage.getItem("jt-done-loc"));if(dd&&dd.date===td())done=dd;else done={ex:[],dv:[],date:td()}}catch(e){done={ex:[],dv:[],date:td()}}}
+ldRole();render();
+</script>
+</body>
+</html>
